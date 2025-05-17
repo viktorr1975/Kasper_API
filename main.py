@@ -8,9 +8,10 @@ import urllib3
 import socket
 import struct
 import csv
+import passwd
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-username = 'administrator'
-password = '1qazXSW@'
+username = passwd.username
+password = passwd.password
 #!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
