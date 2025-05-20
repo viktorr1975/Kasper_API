@@ -2,18 +2,21 @@ from KlAkOAPI.AdmServer import KlAkAdmServer
 from KlAkOAPI import Updates
 from KlAkOAPI import HostGroup
 from KlAkOAPI import ChunkAccessor
-from datetime import timedelta
+
+#from datetime import timedelta
 
 import urllib3
 import socket
 import struct
 import csv
 import passwd
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# !!!!!!!!!!!!!
+# Можно сделать поиск по полю # "KLHST_WKS_COMMENT",'Comments.'
+# !!!!!!!!!!!!!!!!!!!!!!!!
+
 username = passwd.username
 password = passwd.password
-#!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
 KSC_LIST = {
     'WINDOWS': 'https://192.168.122.181:13299', # VM win2k16-3
@@ -25,17 +28,18 @@ def ConnectKSC(ip):
         try:
             connect = KlAkAdmServer.Create(ip, username, password, verify=False, vserver='')
 
-            if connect:
-                print('Успешно подключился к {}'.format(ip))
-            else:
-                print('Ошибка подключения к {}'.format(ip))
-                exit()
+            # if connect:
+            #     print('Успешно подключился к {}'.format(ip))
+            # else:
+            #     print('Ошибка подключения к {}'.format(ip))
+            #     exit()
 
             return connect
         except Exception as e:
             print(e)
             return None
 
+#!!!!надо будет удалить, пусть только для хоста будут функции
 def get_status_hosts(server, ip):
 #получение информации о датах обновлений
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -65,13 +69,66 @@ def convert_int_to_ip(n):
 # IP4 addresses can be represented in big-endian byte order,
     return socket.inet_ntoa(struct.pack('<I', n))
 
+def convert_KLHST_WKS_STATUS_ID(n):
+    match n:
+      case 0:
+        return "OK"
+      case 1:
+        return "Критический"
+      case 2:
+        return "Предупреждение"
+      case _:
+        return n
+
+def convert_KLHST_WKS_STATUS(n):
+    status = []
+    status.append("Видим в сети") if n & 0b1 else  status.append("НЕ в сети")
+    status.append("Агент администрирования установлен") if n & 0b100 else status.append("Агент администрирования НЕ установлен")
+    status.append("Агент администрирования запущен") if n & 0b1000 else status.append("Агент администрирования НЕ запущен")
+    status.append("Постоянная защита установлена") if n & 0b10000 else status.append("Постоянная защита НЕ установлена")
+    return status
+
+def convert_KLHST_WKS_RTP_STATE(n):
+    match n:
+      case 0:
+        return "Неизвестно"
+      case 1:
+        return "Остановлена"
+      case 2:
+        return "Suspended"
+      case 3:
+        return "Стартует"
+      case 4:
+        return "Запущена"
+      case 5:
+        return "Запущена с максимальной защитой"
+      case 6:
+        return "Запущена с максимальной производительностью"
+      case 7:
+        return "Запущена с рекомендуемыми настройками"
+      case 8:
+        return "Запущена с пользовательскими настройками"
+      case 9:
+        return "Ошибка"
+      case _:
+        return n
+
 def save_to_csv(lstHostsData, strFileName="hosts.csv"):
 # сохраняем список с данными хостов в файл формата CSV
     # список заголовков для данных хоста
     replacements = {
-        "KLHST_WKS_DN": 'Имя',
-        "KLHST_WKS_IP": 'IP',
-        "KLHST_WKS_GROUPID": 'Группа'}
+    "KLHST_WKS_DN": 'Имя',
+    "KLHST_WKS_IP": 'IP',
+    "KLHST_WKS_GROUPID": 'Группа',
+    "grp_full_name":'Полное название группы',
+    "KLHST_WKS_FROM_UNASSIGNED":'The parameter accepts true if host is located in "Unassigned computers" or its subgroup.',
+    "KLHST_WKS_LAST_VISIBLE": 'Последнее появление в сети',
+    "KLHST_WKS_FQDN":'DNS-имя',
+    "KLHST_WKS_OS_NAME": 'Тип операционной системы',
+    "KLHST_WKS_COMMENT": 'Описание',
+    "KLHST_WKS_STATUS_ID": 'Дополнительная информация о статусе',
+    "KLHST_WKS_STATUS": 'Статус',
+    "KLHST_WKS_RTP_STATE": 'Статус постоянной защиты'}
     # Extract all unique keys (headers)
     fieldnames = set()
     for entry in lstHostsData:
@@ -98,7 +155,10 @@ def get_host_info(server, strQueryString):
     if server is not None:
         oHostGroup = HostGroup.KlAkHostGroup(server)
         strAccessor = oHostGroup.FindHosts(
-            'KLHST_WKS_DN = "' + strQueryString + '"', ["KLHST_WKS_GROUPID", "KLHST_WKS_DN", "KLHST_WKS_IP"],
+            'KLHST_WKS_DN = "' + strQueryString + '"',
+            ["KLHST_WKS_GROUPID", "grp_full_name", "KLHST_WKS_FROM_UNASSIGNED", "KLHST_WKS_DN",
+             "KLHST_WKS_IP", "KLHST_WKS_LAST_VISIBLE", "KLHST_WKS_FQDN", "KLHST_WKS_OS_NAME",
+             "KLHST_WKS_COMMENT",  "KLHST_WKS_STATUS_ID", "KLHST_WKS_STATUS", "KLHST_WKS_RTP_STATE"],
             [], {'KLGRP_FIND_FROM_CUR_VS_ONLY': True},
             lMaxLifeTime=60 * 60 * 3).OutPar('strAccessor')
 
@@ -116,6 +176,15 @@ def get_host_info(server, strQueryString):
                 host["KLHST_WKS_DN"] = oObj['KLHST_WKS_DN']
                 host["KLHST_WKS_IP"] = convert_int_to_ip(oObj['KLHST_WKS_IP'])
                 host["KLHST_WKS_GROUPID"] = oHostGroup.GetGroupInfo(oObj['KLHST_WKS_GROUPID']).retval.GetValue('name')
+                host["grp_full_name"] = oObj['grp_full_name']
+                host["KLHST_WKS_FROM_UNASSIGNED"] = oObj['KLHST_WKS_FROM_UNASSIGNED']
+                host["KLHST_WKS_LAST_VISIBLE"] = oObj['KLHST_WKS_LAST_VISIBLE'].strftime("%d.%m.%Y %H:%M")
+                host["KLHST_WKS_FQDN"] = oObj['KLHST_WKS_FQDN']
+                host["KLHST_WKS_OS_NAME"] = oObj['KLHST_WKS_OS_NAME']
+                host["KLHST_WKS_COMMENT"] = oObj['KLHST_WKS_COMMENT']
+                host["KLHST_WKS_STATUS_ID"] = convert_KLHST_WKS_STATUS_ID(oObj['KLHST_WKS_STATUS_ID'])
+                host["KLHST_WKS_STATUS"] = convert_KLHST_WKS_STATUS(oObj['KLHST_WKS_STATUS'])
+                host["KLHST_WKS_RTP_STATE"] = convert_KLHST_WKS_RTP_STATE(oObj['KLHST_WKS_RTP_STATE'])
                 result.append(host)
 #                print('Found host: ' + oObj['KLHST_WKS_DN'])
 #                print('Host IPv4 address with network byte order: ',  convert_int_to_ip(oObj['KLHST_WKS_IP']))
@@ -128,5 +197,10 @@ def get_host_info(server, strQueryString):
 if __name__ == '__main__':
     for ip in KSC_LIST.values():
         server = ConnectKSC(ip)
-        hosts = get_host_info(server, "*wIN*")
-        save_to_csv(hosts, "hosts1.csv")
+        if server:
+            print('Успешно подключился к {}'.format(ip))
+            hosts = get_host_info(server, "*win*")
+            print(hosts)
+#        save_to_csv(hosts, "hosts1.csv")
+        else:
+            print('Ошибка подключения к {}'.format(ip))
