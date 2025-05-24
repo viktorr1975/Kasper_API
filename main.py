@@ -3,16 +3,25 @@ from KlAkOAPI import Updates
 from KlAkOAPI import HostGroup
 from KlAkOAPI import ChunkAccessor
 
-#from datetime import timedelta
 
-import urllib3
-import socket
-import struct
-import csv
-import passwd
 
+import urllib3  #
+import socket   #
+import struct   #
+import csv      # вывод результатов в формате CSV
+import passwd   # файл с логинами/паролями, которй в GIT не идёт
+import argparse # разбор командной строки
+
+#!!!!!!!!!!!!!!!!!!!!!
+#Нужно сделать параметры командной строки: файл со списком хостов/IP, файл со списком KSC,
+# файл лога(там итоги поиска по каждому имени/IP в формате найдено и количество найденного) и простой вариант имя/IP хоста и адрес KSC,
+# также предусмотреть имена файлов по умолчанию
 # !!!!!!!!!!!!!
 # Можно сделать поиск по полю # "KLHST_WKS_COMMENT",'Comments.'
+#!!!!!!!!!1
+# Надо поиск по IP сделать
+#regex = "^[\d\*][\d\.]{0,13}[\d\*]$"
+# адрес начинается с цифры или *, заканчивается на цифру или *, содержит цифры и точки и не длиннее 15 символов
 # !!!!!!!!!!!!!!!!!!!!!!!!
 
 username = passwd.username
@@ -171,6 +180,7 @@ def get_host_info(server, strQueryString):
         while nStart < nCount:
             oChunk = oChunkAccessor.GetItemsChunk(strAccessor, nStart, nStep)
             parHosts = oChunk.OutPar('pChunk')['KLCSP_ITERATOR_ARRAY']
+#по-хорошему надо получить все ключи через oObj.GetNames, а потом значения через GetValue. Но мне для формирования выходной структуры удобнее так
             for oObj in parHosts:
                 host = {}
                 host["KLHST_WKS_DN"] = oObj['KLHST_WKS_DN']
@@ -181,7 +191,7 @@ def get_host_info(server, strQueryString):
                 host["KLHST_WKS_LAST_VISIBLE"] = oObj['KLHST_WKS_LAST_VISIBLE'].strftime("%d.%m.%Y %H:%M")
                 host["KLHST_WKS_FQDN"] = oObj['KLHST_WKS_FQDN']
                 host["KLHST_WKS_OS_NAME"] = oObj['KLHST_WKS_OS_NAME']
-                host["KLHST_WKS_COMMENT"] = oObj['KLHST_WKS_COMMENT']
+                host["KLHST_WKS_COMMENT"] = oObj.data.get('KLHST_WKS_COMMENT',"")
                 host["KLHST_WKS_STATUS_ID"] = convert_KLHST_WKS_STATUS_ID(oObj['KLHST_WKS_STATUS_ID'])
                 host["KLHST_WKS_STATUS"] = convert_KLHST_WKS_STATUS(oObj['KLHST_WKS_STATUS'])
                 host["KLHST_WKS_RTP_STATE"] = convert_KLHST_WKS_RTP_STATE(oObj['KLHST_WKS_RTP_STATE'])
@@ -195,12 +205,16 @@ def get_host_info(server, strQueryString):
         print('Ошибка доступа к серверу')
 
 if __name__ == '__main__':
-    for ip in KSC_LIST.values():
-        server = ConnectKSC(ip)
-        if server:
-            print('Успешно подключился к {}'.format(ip))
-            hosts = get_host_info(server, "*win*")
-            print(hosts)
-#        save_to_csv(hosts, "hosts1.csv")
-        else:
-            print('Ошибка подключения к {}'.format(ip))
+#     FindWhat = "*win*"
+#     for ip in KSC_LIST.values():
+#         server = ConnectKSC(ip)
+#         if server:
+#             print('Успешно подключился к {}'.format(ip))
+#             hosts = get_host_info(server, FindWhat)
+#             print(hosts)
+# #        save_to_csv(hosts, "hosts1.csv")
+#         else:
+#             print('Ошибка подключения к {}'.format(ip))
+    parser = argparse.ArgumentParser()
+    parser.parse_args()
+    print("Hello")
