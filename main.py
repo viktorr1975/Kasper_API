@@ -11,6 +11,7 @@ import struct   #
 import csv      # вывод результатов в формате CSV
 import passwd   # файл с логинами/паролями, которй в GIT не идёт
 import argparse # разбор командной строки
+import console     # модуль сообщений для опций командной строки
 
 #!!!!!!!!!!!!!!!!!!!!!
 #Нужно сделать параметры командной строки: файл со списком хостов/IP, файл со списком KSC,
@@ -24,13 +25,16 @@ import argparse # разбор командной строки
 # адрес начинается с цифры или *, заканчивается на цифру или *, содержит цифры и точки и не длиннее 15 символов
 # !!!!!!!!!!!!!!!!!!!!!!!!
 
+
 username = passwd.username
 password = passwd.password
 
-KSC_LIST = {
-    'WINDOWS': 'https://192.168.122.181:13299', # VM win2k16-3
-#    'LINUX': 'https://IP_KSC_LINUX:13299'
-}
+
+# !!!!!!!!!!! Надо будет удалить, адрес KSC будет через командную строку передаваться
+# KSC_LIST = {
+#     'WINDOWS': 'https://192.168.122.181:13299', # VM win2k16-3
+# #    'LINUX': 'https://IP_KSC_LINUX:13299'
+# }
 
 def ConnectKSC(ip):
     while True:
@@ -122,7 +126,7 @@ def convert_KLHST_WKS_RTP_STATE(n):
       case _:
         return n
 
-def save_to_csv(lstHostsData, strFileName="hosts.csv"):
+def save_to_csv(lstHostsData, ioOutFile):
 # сохраняем список с данными хостов в файл формата CSV
     # список заголовков для данных хоста
     replacements = {
@@ -149,7 +153,8 @@ def save_to_csv(lstHostsData, strFileName="hosts.csv"):
 
 #my_list = list(map(lambda x: new_value if x == old_value else x, my_list))
     # Writing to CSV
-    with open(strFileName, mode='w', newline='') as file:
+#    with open(strFileName, mode='w', newline='') as file:
+    with ioOutFile as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writerow(headers)    # write the header
         #writer.writeheader(headers)  # Write header row
@@ -204,17 +209,54 @@ def get_host_info(server, strQueryString):
     else:
         print('Ошибка доступа к серверу')
 
+def get_args():
+# получим данные от пользователя через командную строку
+    parser = argparse.ArgumentParser(description=console.helpme)  # Initialize arguments parser
+    parser.add_argument(  # Adding optional argument
+        "-s",
+        type=str,
+        required=True,
+        metavar="KSC_ip",
+        help=console.help_s)
+    parser.add_argument(  # Adding optional argument
+        "-n",
+        type=str,
+        required=True,
+        metavar="host_name",
+        help=console.help_host_name)
+    # parser.add_argument(    # Adding optional argument
+    #     "-i",
+    #     type=str,
+    #     default=console.default_in,
+    #     metavar="input_file",
+    #     help=console.help_in)
+    # parser.add_argument('outfile', nargs='?', type=argparse.FileType('w'),
+    #                 default=sys.stdout)
+    parser.add_argument(    # Adding optional argument
+        "-o",
+        type=argparse.FileType('w'),
+        nargs='?',
+        default=console.default_out,
+        metavar="output_file",
+        help=console.help_out)
+    args = parser.parse_args()  # Read arguments from command line
+   # args = parser.parse_args(["-s", "192.168.122.181", "-n", "*win*"])
+
+    # if args.i == None:
+    #     pass
+    # print("Необходимо указать ip адрес KSC: % s" % args)
+    return args
+
 if __name__ == '__main__':
-#     FindWhat = "*win*"
-#     for ip in KSC_LIST.values():
-#         server = ConnectKSC(ip)
-#         if server:
-#             print('Успешно подключился к {}'.format(ip))
-#             hosts = get_host_info(server, FindWhat)
-#             print(hosts)
-# #        save_to_csv(hosts, "hosts1.csv")
-#         else:
-#             print('Ошибка подключения к {}'.format(ip))
-    parser = argparse.ArgumentParser()
-    parser.parse_args()
-    print("Hello")
+    args = get_args()
+    KSCip = 'https://' + args.s + ':13299'
+    FindWhat = args.n
+#    for KSCip in KSC_LIST.values():
+    server = ConnectKSC(KSCip)
+    if server:
+        print('Успешно подключился к {}'.format(KSCip))
+        HostData = get_host_info(server, FindWhat)
+        save_to_csv(HostData, args.o)
+    else:
+        print('Ошибка подключения к {}'.format(KSCip))
+
