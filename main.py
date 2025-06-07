@@ -211,18 +211,19 @@ def get_host_info(server, strQueryString):
 
 def get_args():
 # получим данные от пользователя через командную строку
-    parser = argparse.ArgumentParser(description=console.helpme)  # Initialize arguments parser
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=console.helpme)  # Initialize arguments parser
+    parser.add_argument('-v', action='version', version='%(prog)s 1.0')
     parser.add_argument(  # Adding optional argument
         "-s",
         type=str,
         required=True,
-        metavar="KSC_ip",
+        metavar="KSCip",
         help=console.help_s)
     parser.add_argument(  # Adding optional argument
         "-n",
         type=str,
         required=True,
-        metavar="host_name",
+        metavar="HostName",
         help=console.help_host_name)
     # parser.add_argument(    # Adding optional argument
     #     "-i",
@@ -235,7 +236,6 @@ def get_args():
     parser.add_argument(    # Adding optional argument
         "-o",
         type=argparse.FileType('w'),
-        nargs='?',
         default=console.default_out,
         metavar="output_file",
         help=console.help_out)
