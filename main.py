@@ -14,10 +14,11 @@ import argparse # разбор командной строки
 import console     # модуль сообщений для опций командной строки
 
 #!!!!!!!!!!!!!!!!!!!!!
-#Нужно сделать параметры командной строки: файл со списком хостов/IP, файл со списком KSC,
-# файл лога(там итоги поиска по каждому имени/IP в формате найдено и количество найденного) и простой вариант имя/IP хоста и адрес KSC,
-# также предусмотреть имена файлов по умолчанию
+#TODO Нужно сделать параметры командной строки: файл со списком хостов/IP, файл со списком KSC,
+# файл лога(там итоги поиска по каждому имени/IP в формате найдено и количество найденного)
 # !!!!!!!!!!!!!
+#TODO Нужно сделать работу со списком хостов и списком KSC и сохранение лога результатов
+#
 # Можно сделать поиск по полю # "KLHST_WKS_COMMENT",'Comments.'
 #!!!!!!!!!1
 # Надо поиск по IP сделать
@@ -239,6 +240,13 @@ def get_args():
         default=console.default_out,
         metavar="output_file",
         help=console.help_out)
+    parser.add_argument(  # Adding optional argument
+        "-l",
+        type=argparse.FileType('w'),
+        default=console.default_log,
+        #default=sys.stdout
+        metavar="log_file",
+        help=console.help_log)
     args = parser.parse_args()  # Read arguments from command line
    # args = parser.parse_args(["-s", "192.168.122.181", "-n", "*win*"])
 
@@ -253,10 +261,12 @@ if __name__ == '__main__':
     FindWhat = args.n
 #    for KSCip in KSC_LIST.values():
     server = ConnectKSC(KSCip)
-    if server:
-        print('Успешно подключился к {}'.format(KSCip))
-        HostData = get_host_info(server, FindWhat)
-        save_to_csv(HostData, args.o)
-    else:
-        print('Ошибка подключения к {}'.format(KSCip))
+    with args.l as LogFile:
+        if server:
+            LogFile.write('Успешно подключился к {}'.format(KSCip))
+            HostData = get_host_info(server, FindWhat)
+            LogFile.write('Для запроса "' +FindWhat + '" найдено устройств: {}'.format(len(HostData)))
+            save_to_csv(HostData, args.o)
+        else:
+            LogFile.write('Ошибка подключения к {}'.format(KSCip))
 
