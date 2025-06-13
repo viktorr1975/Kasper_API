@@ -78,6 +78,18 @@ def get_status_hosts(server, ip):
         else:
             print('Ошибка доступа к серверу')
 
+def get_KSC_from_file(ioInFile):
+#читаем списко ip-адресов KSC из файла и возвращаем в виде списка
+    KSC_LIST= [line.strip()  for line in ioInFile if line.strip() != '']
+    return KSC_LIST
+#return ioInFile.readlines()
+#    with ioInFile as file:
+        # for line_number, line in enumerate(file, start=1):
+        #     print(f"Строка {line_number}: {line.strip()}")
+        # for line in file:
+        #     KSC_LIST = ','.join(part.strip() for part in line.split(','))
+        #     print(cf)
+
 def convert_int_to_ip(n):
 # convert integer to IP4 address
 # IP4 addresses can be represented in big-endian byte order,
@@ -155,11 +167,16 @@ def save_to_csv(lstHostsData, ioOutFile):
 #my_list = list(map(lambda x: new_value if x == old_value else x, my_list))
     # Writing to CSV
 #    with open(strFileName, mode='w', newline='') as file:
-    with ioOutFile as file:
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
+#    with ioOutFile as file:
+    writer = csv.DictWriter(ioOutFile, fieldnames=fieldnames)
+# протестируем наличие строк в файле, если есть, заголовок добавлять не будем
+    ioOutFile.seek(0, 2) # go to end of file
+    if ioOutFile.tell(): # if current position is true (i.e != 0)
+        pass
+    else:   #file is empty
         writer.writerow(headers)    # write the header
-        #writer.writeheader(headers)  # Write header row
-        writer.writerows(lstHostsData)  # Write data rows
+    #writer.writeheader(headers)  # Write header row
+    writer.writerows(lstHostsData)  # Write data rows
 
 def get_host_info(server, strQueryString):
 #получение информации об устройстве
@@ -214,26 +231,23 @@ def get_args():
 # получим данные от пользователя через командную строку
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=console.helpme)  # Initialize arguments parser
     parser.add_argument('-v', action='version', version='%(prog)s 1.0')
-    parser.add_argument(  # Adding optional argument
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(  # Adding optional argument
         "-s",
         type=str,
-        required=True,
         metavar="KSCip",
         help=console.help_s)
+    group.add_argument(  # Adding optional argument
+        "-k",
+        type=argparse.FileType('r'),
+        metavar="KSCip_file",
+        help=console.help_k)
     parser.add_argument(  # Adding optional argument
         "-n",
         type=str,
         required=True,
         metavar="HostName",
         help=console.help_host_name)
-    # parser.add_argument(    # Adding optional argument
-    #     "-i",
-    #     type=str,
-    #     default=console.default_in,
-    #     metavar="input_file",
-    #     help=console.help_in)
-    # parser.add_argument('outfile', nargs='?', type=argparse.FileType('w'),
-    #                 default=sys.stdout)
     parser.add_argument(    # Adding optional argument
         "-o",
         type=argparse.FileType('w'),
@@ -257,16 +271,22 @@ def get_args():
 
 if __name__ == '__main__':
     args = get_args()
-    KSCip = 'https://' + args.s + ':13299'
+    if args.k:
+        KSC_LIST = get_KSC_from_file(args.k)
+    else:
+        KSC_LIST = [args.s]
     FindWhat = args.n
 #    for KSCip in KSC_LIST.values():
-    server = ConnectKSC(KSCip)
-    with args.l as LogFile:
+    LogFile = args.l # для удобства сделаем alias
+    for nextKSC in KSC_LIST:
+        KSCip = 'https://' + nextKSC + ':13299'
+        server = ConnectKSC(KSCip)
         if server:
-            LogFile.write('Успешно подключился к {}'.format(KSCip))
+            LogFile.write('Успешно подключился к {}\n'.format(KSCip))
             HostData = get_host_info(server, FindWhat)
-            LogFile.write('Для запроса "' +FindWhat + '" найдено устройств: {}'.format(len(HostData)))
+            LogFile.write('Для запроса "' +FindWhat + '" найдено устройств: {}\n'.format(len(HostData)))
             save_to_csv(HostData, args.o)
+            server.Disconnect()
         else:
-            LogFile.write('Ошибка подключения к {}'.format(KSCip))
+            LogFile.write('Ошибка подключения к {}\n'.format(KSCip))
 
