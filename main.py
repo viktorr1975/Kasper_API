@@ -13,6 +13,10 @@ import passwd   # файл с логинами/паролями, которй в
 import argparse # разбор командной строки
 import console     # модуль сообщений для опций командной строки
 
+# timeout = urllib3.util.Timeout(connect=2.0, read=7.0)
+# http = urllib3.PoolManager(timeout=timeout)
+# retries = urllib3.util.Retry(connect=5, read=2, redirect=5)
+# http = urllib3.PoolManager(retries=retries)
 #!!!!!!!!!!!!!!!!!!!!!
 #TODO Нужно сделать параметры командной строки: файл со списком хостов/IP, файл со списком KSC,
 # файл лога(там итоги поиска по каждому имени/IP в формате найдено и количество найденного)
@@ -89,6 +93,10 @@ def get_KSC_from_file(ioInFile):
         # for line in file:
         #     KSC_LIST = ','.join(part.strip() for part in line.split(','))
         #     print(cf)
+def get_hostes_from_file(ioInFile):
+# получаем из файла имена устройств
+    HOSTS_LIST= [line.strip()  for line in ioInFile if line.strip() != '']
+    return HOSTS_LIST
 
 def convert_int_to_ip(n):
 # convert integer to IP4 address
@@ -231,23 +239,28 @@ def get_args():
 # получим данные от пользователя через командную строку
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=console.helpme)  # Initialize arguments parser
     parser.add_argument('-v', action='version', version='%(prog)s 1.0')
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(  # Adding optional argument
+    group_ksc = parser.add_mutually_exclusive_group()
+    group_host = parser.add_mutually_exclusive_group()
+    group_ksc.add_argument(  # Adding optional argument
         "-s",
         type=str,
         metavar="KSCip",
         help=console.help_s)
-    group.add_argument(  # Adding optional argument
+    group_ksc.add_argument(  # Adding optional argument
         "-k",
         type=argparse.FileType('r'),
         metavar="KSCip_file",
         help=console.help_k)
-    parser.add_argument(  # Adding optional argument
+    group_host.add_argument(  # Adding optional argument
         "-n",
         type=str,
-        required=True,
         metavar="HostName",
         help=console.help_host_name)
+    group_host.add_argument(  # Adding optional argument
+        "-i",
+        type=argparse.FileType('r'),
+        metavar="HostName_file",
+        help=console.help_i)
     parser.add_argument(    # Adding optional argument
         "-o",
         type=argparse.FileType('w'),
@@ -275,7 +288,10 @@ if __name__ == '__main__':
         KSC_LIST = get_KSC_from_file(args.k)
     else:
         KSC_LIST = [args.s]
-    FindWhat = args.n
+    if args.n:
+        lstFindHostes = [str(args.n)]
+    else:
+        lstFindHostes = get_hostes_from_file(args.i)
 #    for KSCip in KSC_LIST.values():
     LogFile = args.l # для удобства сделаем alias
     for nextKSC in KSC_LIST:
@@ -283,9 +299,10 @@ if __name__ == '__main__':
         server = ConnectKSC(KSCip)
         if server:
             LogFile.write('Успешно подключился к {}\n'.format(KSCip))
-            HostData = get_host_info(server, FindWhat)
-            LogFile.write('Для запроса "' +FindWhat + '" найдено устройств: {}\n'.format(len(HostData)))
-            save_to_csv(HostData, args.o)
+            for FindWhat in lstFindHostes:
+                HostData = get_host_info(server, FindWhat)
+                LogFile.write('Для запроса "' +FindWhat + '" найдено устройств: {}\n'.format(len(HostData)))
+                save_to_csv(HostData, args.o)
             server.Disconnect()
         else:
             LogFile.write('Ошибка подключения к {}\n'.format(KSCip))
