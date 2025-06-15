@@ -18,13 +18,8 @@ import console     # модуль сообщений для опций кома�
 # retries = urllib3.util.Retry(connect=5, read=2, redirect=5)
 # http = urllib3.PoolManager(retries=retries)
 #!!!!!!!!!!!!!!!!!!!!!
-#TODO Нужно сделать параметры командной строки: файл со списком хостов/IP, файл со списком KSC,
-# файл лога(там итоги поиска по каждому имени/IP в формате найдено и количество найденного)
-# !!!!!!!!!!!!!
-#TODO Нужно сделать работу со списком хостов и списком KSC и сохранение лога результатов
-#
-# Можно сделать поиск по полю # "KLHST_WKS_COMMENT",'Comments.'
-#!!!!!!!!!1
+#TODO Можно сделать поиск по IP, полю # "KLHST_WKS_COMMENT",'Comments.'
+#!!!!!!!!!
 # Надо поиск по IP сделать
 #regex = "^[\d\*][\d\.]{0,13}[\d\*]$"
 # адрес начинается с цифры или *, заканчивается на цифру или *, содержит цифры и точки и не длиннее 15 символов
@@ -238,7 +233,7 @@ def get_host_info(server, strQueryString):
 def get_args():
 # получим данные от пользователя через командную строку
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=console.helpme)  # Initialize arguments parser
-    parser.add_argument('-v', action='version', version='%(prog)s 1.0')
+    parser.add_argument('-v', action='version', version='%(prog)s 2.0')
     group_ksc = parser.add_mutually_exclusive_group()
     group_host = parser.add_mutually_exclusive_group()
     group_ksc.add_argument(  # Adding optional argument
