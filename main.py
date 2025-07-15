@@ -1,5 +1,4 @@
 from KlAkOAPI.AdmServer import KlAkAdmServer
-from KlAkOAPI import Updates
 from KlAkOAPI import HostGroup
 from KlAkOAPI import ChunkAccessor
 
@@ -31,95 +30,64 @@ username = passwd.username
 password = passwd.password
 
 
-# !!!!!!!!!!! Надо будет удалить, адрес KSC будет через командную строку передаваться
-# KSC_LIST = {
-#     'WINDOWS': 'https://192.168.122.181:13299', # VM win2k16-3
-# #    'LINUX': 'https://IP_KSC_LINUX:13299'
-# }
 def ConnectKSC_2FA_Token(ip):
     # connect to KSC  with two-factor Token authentication using TOTP codes
     # The Token (KlAkAdmServer.CreateByToken) can be used for logon purposes to Administration Server for a short time (3 minutes by default).
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     url_login = ip + "/api/v1.0/login"
     url_CreateToken = ip + "/api/v1.0/Session.CreateToken"
-    user = base64.b64encode(username.encode('utf-8')).decode("utf-8")
-    passwd = base64.b64encode(password.encode('utf-8')).decode("utf-8")
+    user = base64.b64encode(username.encode("utf-8")).decode("utf-8")
+    passwd = base64.b64encode(password.encode("utf-8")).decode("utf-8")
     session = requests.Session()
     auth_headers = {
-        'Authorization': 'KSCBasic user="' + user + '", pass="' + passwd + '", internal="0"',
-        'Content-Type': 'application/json',
+        "Authorization": 'KSCBasic user="'
+        + user
+        + '", pass="'
+        + passwd
+        + '", internal="0"',
+        "Content-Type": "application/json",
     }
     data = {}
     connect = None
-    response = session.post(url=url_login, headers=auth_headers, data=data, verify=False)
-    if response.status_code == 401 and response.text == 'Authentication not finished':
-        totp = input('Enter a TOTP: ')
+    response = session.post(
+        url=url_login, headers=auth_headers, data=data, verify=False
+    )
+    if response.status_code == 401 and response.text == "Authentication not finished":
+        totp = input("Enter a TOTP: ")
         auth_headers = {
-            'Authorization': 'KSCMFA totp="' + totp + '"',
-            'Content-Type': 'application/json',
+            "Authorization": 'KSCMFA totp="' + totp + '"',
+            "Content-Type": "application/json",
         }
         data = {}
-        response = session.post(url=url_login, headers=auth_headers, data=data, verify=False)
+        response = session.post(
+            url=url_login, headers=auth_headers, data=data, verify=False
+        )
         if response.status_code == 200:
-            response = session.post(url=url_CreateToken, headers="", data=data, verify=False)
+            response = session.post(
+                url=url_CreateToken, headers="", data=data, verify=False
+            )
             if response.status_code == 200:
                 Token = json.loads(response.text)["PxgRetVal"]
-                connect = KlAkAdmServer.CreateByToken(ip, Token, verify=False, vserver='')
-#                return connect
-#     elif response.status_code == 403:
-#         # print("Invalid credentials or access if forbidden.")
-#         session.close()
-#     elif response.status_code == 200:
-#         session.close()
-#         connect = KlAkAdmServer.Create(ip, username, password, verify=False, vserver='')
-#        return connect
+                connect = KlAkAdmServer.CreateByToken(
+                    ip, Token, verify=False, vserver=""
+                )
+    #                return connect
+    #     elif response.status_code == 403:
+    #         # print("Invalid credentials or access if forbidden.")
+    #         session.close()
+    #     elif response.status_code == 200:
+    #         session.close()
+    #         connect = KlAkAdmServer.Create(ip, username, password, verify=False, vserver='')
+    #        return connect
     else:
         session.close()
-        connect = KlAkAdmServer.Create(ip, username, password, verify=False, vserver='')
+        connect = KlAkAdmServer.Create(ip, username, password, verify=False, vserver="")
     return connect
 
 
-# def ConnectKSC(ip):
-# # connect to KSC  trough base authentication
-#     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-#     #while True:
-#     try:
-#         connect = KlAkAdmServer.Create(ip, username, password, verify=False, vserver='')
-#         return connect
-#
-#     except Exception as e:
-#         print(e)
-#         return None
-
-# !!!!надо будет удалить, пусть только для хоста будут функции
-def get_status_hosts(server, ip):
-    # получение информации о датах обновлений
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-    params = []
-    if server is not None:
-        straccessor = Updates.KlAkUpdates(server).GetUpdatesInfo(pFilter=params)
-        ncount = straccessor.RetVal()
-        if ip == KSC_LIST['WINDOWS']:
-            data = ncount[1]
-            print('')
-            print('KSC ======== [ {} ] ========'.format(KSC_LIST['WINDOWS']))
-            print('Дата создания: {}'.format(data['Date'] + timedelta(hours=3)))
-            print('Дата получения: {}'.format(data['KLUPDSRV_BUNDLE_DWL_DATE'] + timedelta(hours=3)))
-            print('============================')
-        elif ip == KSC_LIST['LINUX']:
-            data = ncount[2]
-            print('')
-            print('KSC ======== [ {} ] ========'.format(KSC_LIST['LINUX']))
-            print('Дата создания: {}'.format(data['Date'] + timedelta(hours=3)))
-            print('Дата получения: {}'.format(data['KLUPDSRV_BUNDLE_DWL_DATE'] + timedelta(hours=3)))
-            print('============================')
-    else:
-        print('Ошибка доступа к серверу')
-
-
 def get_KSC_from_file(ioInFile):
-    # читаем списко ip-адресов KSC из файла и возвращаем в виде списка
-    KSC_LIST = [line.strip() for line in ioInFile if line.strip() != '']
+    # читаем список ip-адресов KSC из файла и возвращаем в виде списка
+    KSC_LIST = [line.strip() for line in ioInFile if line.strip() != ""]
     return KSC_LIST
 
 
@@ -130,16 +98,18 @@ def get_KSC_from_file(ioInFile):
 # for line in file:
 #     KSC_LIST = ','.join(part.strip() for part in line.split(','))
 #     print(cf)
+
+
 def get_hostes_from_file(ioInFile):
     # получаем из файла имена устройств
-    HOSTS_LIST = [line.strip() for line in ioInFile if line.strip() != '']
+    HOSTS_LIST = [line.strip() for line in ioInFile if line.strip() != ""]
     return HOSTS_LIST
 
 
 def convert_int_to_ip(n):
     # convert integer to IP4 address
     # IP4 addresses can be represented in big-endian byte order,
-    return socket.inet_ntoa(struct.pack('<I', n))
+    return socket.inet_ntoa(struct.pack("<I", n))
 
 
 def convert_KLHST_WKS_STATUS_ID(n):
@@ -157,11 +127,21 @@ def convert_KLHST_WKS_STATUS_ID(n):
 def convert_KLHST_WKS_STATUS(n):
     status = []
     status.append("Видим в сети") if n & 0b1 else status.append("НЕ в сети")
-    status.append("Агент администрирования установлен") if n & 0b100 else status.append(
-        "Агент администрирования НЕ установлен")
-    status.append("Агент администрирования запущен") if n & 0b1000 else status.append(
-        "Агент администрирования НЕ запущен")
-    status.append("Постоянная защита установлена") if n & 0b10000 else status.append("Постоянная защита НЕ установлена")
+    (
+        status.append("Агент администрирования установлен")
+        if n & 0b100
+        else status.append("Агент администрирования НЕ установлен")
+    )
+    (
+        status.append("Агент администрирования запущен")
+        if n & 0b1000
+        else status.append("Агент администрирования НЕ запущен")
+    )
+    (
+        status.append("Постоянная защита установлена")
+        if n & 0b10000
+        else status.append("Постоянная защита НЕ установлена")
+    )
     return status
 
 
@@ -195,18 +175,19 @@ def save_to_csv(lstHostsData, ioOutFile):
     # сохраняем список с данными хостов в файл формата CSV
     # список заголовков для данных хоста
     replacements = {
-        "KLHST_WKS_DN": 'Имя',
-        "KLHST_WKS_IP": 'IP',
-        "KLHST_WKS_GROUPID": 'Группа',
-        "grp_full_name": 'Полное название группы',
+        "KLHST_WKS_DN": "Имя",
+        "KLHST_WKS_IP": "IP",
+        "KLHST_WKS_GROUPID": "Группа",
+        "grp_full_name": "Полное название группы",
         "KLHST_WKS_FROM_UNASSIGNED": 'The parameter accepts true if host is located in "Unassigned computers" or its subgroup.',
-        "KLHST_WKS_LAST_VISIBLE": 'Последнее появление в сети',
-        "KLHST_WKS_FQDN": 'DNS-имя',
-        "KLHST_WKS_OS_NAME": 'Тип операционной системы',
-        "KLHST_WKS_COMMENT": 'Описание',
-        "KLHST_WKS_STATUS_ID": 'Дополнительная информация о статусе',
-        "KLHST_WKS_STATUS": 'Статус',
-        "KLHST_WKS_RTP_STATE": 'Статус постоянной защиты'}
+        "KLHST_WKS_LAST_VISIBLE": "Последнее появление в сети",
+        "KLHST_WKS_FQDN": "DNS-имя",
+        "KLHST_WKS_OS_NAME": "Тип операционной системы",
+        "KLHST_WKS_COMMENT": "Описание",
+        "KLHST_WKS_STATUS_ID": "Дополнительная информация о статусе",
+        "KLHST_WKS_STATUS": "Статус",
+        "KLHST_WKS_RTP_STATE": "Статус постоянной защиты",
+    }
     # Extract all unique keys (headers)
     fieldnames = set()
     for entry in lstHostsData:
@@ -241,11 +222,24 @@ def get_host_info(server, strQueryString):
         oHostGroup = HostGroup.KlAkHostGroup(server)
         strAccessor = oHostGroup.FindHosts(
             'KLHST_WKS_DN = "' + strQueryString + '"',
-            ["KLHST_WKS_GROUPID", "grp_full_name", "KLHST_WKS_FROM_UNASSIGNED", "KLHST_WKS_DN",
-             "KLHST_WKS_IP", "KLHST_WKS_LAST_VISIBLE", "KLHST_WKS_FQDN", "KLHST_WKS_OS_NAME",
-             "KLHST_WKS_COMMENT", "KLHST_WKS_STATUS_ID", "KLHST_WKS_STATUS", "KLHST_WKS_RTP_STATE"],
-            [], {'KLGRP_FIND_FROM_CUR_VS_ONLY': True},
-            lMaxLifeTime=60 * 60 * 3).OutPar('strAccessor')
+            [
+                "KLHST_WKS_GROUPID",
+                "grp_full_name",
+                "KLHST_WKS_FROM_UNASSIGNED",
+                "KLHST_WKS_DN",
+                "KLHST_WKS_IP",
+                "KLHST_WKS_LAST_VISIBLE",
+                "KLHST_WKS_FQDN",
+                "KLHST_WKS_OS_NAME",
+                "KLHST_WKS_COMMENT",
+                "KLHST_WKS_STATUS_ID",
+                "KLHST_WKS_STATUS",
+                "KLHST_WKS_RTP_STATE",
+            ],
+            [],
+            {"KLGRP_FIND_FROM_CUR_VS_ONLY": True},
+            lMaxLifeTime=60 * 60 * 3,
+        ).OutPar("strAccessor")
 
         nStart = 0
         nStep = 100
@@ -255,22 +249,32 @@ def get_host_info(server, strQueryString):
         result = []
         while nStart < nCount:
             oChunk = oChunkAccessor.GetItemsChunk(strAccessor, nStart, nStep)
-            parHosts = oChunk.OutPar('pChunk')['KLCSP_ITERATOR_ARRAY']
+            parHosts = oChunk.OutPar("pChunk")["KLCSP_ITERATOR_ARRAY"]
             # по-хорошему надо получить все ключи через oObj.GetNames, а потом значения через GetValue. Но мне для формирования выходной структуры удобнее так
             for oObj in parHosts:
                 host = {}
-                host["KLHST_WKS_DN"] = oObj['KLHST_WKS_DN']
-                host["KLHST_WKS_IP"] = convert_int_to_ip(oObj['KLHST_WKS_IP'])
-                host["KLHST_WKS_GROUPID"] = oHostGroup.GetGroupInfo(oObj['KLHST_WKS_GROUPID']).retval.GetValue('name')
-                host["grp_full_name"] = oObj['grp_full_name']
-                host["KLHST_WKS_FROM_UNASSIGNED"] = oObj['KLHST_WKS_FROM_UNASSIGNED']
-                host["KLHST_WKS_LAST_VISIBLE"] = oObj['KLHST_WKS_LAST_VISIBLE'].strftime("%d.%m.%Y %H:%M")
-                host["KLHST_WKS_FQDN"] = oObj['KLHST_WKS_FQDN']
-                host["KLHST_WKS_OS_NAME"] = oObj['KLHST_WKS_OS_NAME']
-                host["KLHST_WKS_COMMENT"] = oObj.data.get('KLHST_WKS_COMMENT', "")
-                host["KLHST_WKS_STATUS_ID"] = convert_KLHST_WKS_STATUS_ID(oObj['KLHST_WKS_STATUS_ID'])
-                host["KLHST_WKS_STATUS"] = convert_KLHST_WKS_STATUS(oObj['KLHST_WKS_STATUS'])
-                host["KLHST_WKS_RTP_STATE"] = convert_KLHST_WKS_RTP_STATE(oObj['KLHST_WKS_RTP_STATE'])
+                host["KLHST_WKS_DN"] = oObj["KLHST_WKS_DN"]
+                host["KLHST_WKS_IP"] = convert_int_to_ip(oObj["KLHST_WKS_IP"])
+                host["KLHST_WKS_GROUPID"] = oHostGroup.GetGroupInfo(
+                    oObj["KLHST_WKS_GROUPID"]
+                ).retval.GetValue("name")
+                host["grp_full_name"] = oObj["grp_full_name"]
+                host["KLHST_WKS_FROM_UNASSIGNED"] = oObj["KLHST_WKS_FROM_UNASSIGNED"]
+                host["KLHST_WKS_LAST_VISIBLE"] = oObj[
+                    "KLHST_WKS_LAST_VISIBLE"
+                ].strftime("%d.%m.%Y %H:%M")
+                host["KLHST_WKS_FQDN"] = oObj["KLHST_WKS_FQDN"]
+                host["KLHST_WKS_OS_NAME"] = oObj["KLHST_WKS_OS_NAME"]
+                host["KLHST_WKS_COMMENT"] = oObj.data.get("KLHST_WKS_COMMENT", "")
+                host["KLHST_WKS_STATUS_ID"] = convert_KLHST_WKS_STATUS_ID(
+                    oObj["KLHST_WKS_STATUS_ID"]
+                )
+                host["KLHST_WKS_STATUS"] = convert_KLHST_WKS_STATUS(
+                    oObj["KLHST_WKS_STATUS"]
+                )
+                host["KLHST_WKS_RTP_STATE"] = convert_KLHST_WKS_RTP_STATE(
+                    oObj["KLHST_WKS_RTP_STATE"]
+                )
                 result.append(host)
             #                print('Found host: ' + oObj['KLHST_WKS_DN'])
             #                print('Host IPv4 address with network byte order: ',  convert_int_to_ip(oObj['KLHST_WKS_IP']))
@@ -278,49 +282,44 @@ def get_host_info(server, strQueryString):
             nStart += nStep
         return result
     else:
-        print('Ошибка доступа к серверу')
+        print("Ошибка доступа к серверу")
 
 
 def get_args():
     # получим данные от пользователя через командную строку
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     description=console.helpme)  # Initialize arguments parser
-    parser.add_argument('-v', action='version', version='%(prog)s 2.0')
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter, description=console.helpme
+    )  # Initialize arguments parser
+    parser.add_argument("-v", action="version", version="%(prog)s 2.1")
     group_ksc = parser.add_mutually_exclusive_group()
     group_host = parser.add_mutually_exclusive_group()
     group_ksc.add_argument(  # Adding optional argument
-        "-s",
-        type=str,
-        metavar="KSCip",
-        help=console.help_s)
+        "-s", type=str, metavar="KSCip", help=console.help_s
+    )
     group_ksc.add_argument(  # Adding optional argument
-        "-k",
-        type=argparse.FileType('r'),
-        metavar="KSCip_file",
-        help=console.help_k)
+        "-k", type=argparse.FileType("r"), metavar="KSCip_file", help=console.help_k
+    )
     group_host.add_argument(  # Adding optional argument
-        "-n",
-        type=str,
-        metavar="HostName",
-        help=console.help_host_name)
+        "-n", type=str, metavar="HostName", help=console.help_host_name
+    )
     group_host.add_argument(  # Adding optional argument
-        "-i",
-        type=argparse.FileType('r'),
-        metavar="HostName_file",
-        help=console.help_i)
+        "-i", type=argparse.FileType("r"), metavar="HostName_file", help=console.help_i
+    )
     parser.add_argument(  # Adding optional argument
         "-o",
-        type=argparse.FileType('w'),
+        type=argparse.FileType("w"),
         default=console.default_out,
         metavar="output_file",
-        help=console.help_out)
+        help=console.help_out,
+    )
     parser.add_argument(  # Adding optional argument
         "-l",
-        type=argparse.FileType('w'),
+        type=argparse.FileType("w"),
         default=console.default_log,
         # default=sys.stdout
         metavar="log_file",
-        help=console.help_log)
+        help=console.help_log,
+    )
     args = parser.parse_args()  # Read arguments from command line
     # args = parser.parse_args(["-s", "192.168.122.181", "-n", "*win*"])
 
@@ -330,7 +329,7 @@ def get_args():
     return args
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = get_args()
     if args.k:
         KSC_LIST = get_KSC_from_file(args.k)
@@ -343,19 +342,23 @@ if __name__ == '__main__':
     #    for KSCip in KSC_LIST.values():
     LogFile = args.l  # для удобства сделаем alias
     for nextKSC in KSC_LIST:
-        KSCip = 'https://' + nextKSC + ':13299'
+        KSCip = "https://" + nextKSC + ":13299"
         try:
             server = ConnectKSC_2FA_Token(KSCip)
             #       server = ConnectKSC(KSCip)
         except Exception as e:
-            LogFile.write('Ошибка подключения к KSC: {}\n'.format(e.data))
+            LogFile.write("Ошибка подключения к KSC: {}\n".format(e.data))
             exit()
         if server:
-            LogFile.write('Успешно подключился к {}\n'.format(KSCip))
+            LogFile.write("Успешно подключился к {}\n".format(KSCip))
             for FindWhat in lstFindHostes:
                 HostData = get_host_info(server, FindWhat)
-                LogFile.write('Для запроса "' + FindWhat + '" найдено устройств: {}\n'.format(len(HostData)))
+                LogFile.write(
+                    'Для запроса "'
+                    + FindWhat
+                    + '" найдено устройств: {}\n'.format(len(HostData))
+                )
                 save_to_csv(HostData, args.o)
             server.Disconnect()
         else:
-            LogFile.write('Ошибка подключения к {}\n'.format(KSCip))
+            LogFile.write("Ошибка подключения к {}\n".format(KSCip))
